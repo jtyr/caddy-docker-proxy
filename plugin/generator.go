@@ -114,7 +114,22 @@ func (g *CaddyfileGenerator) GenerateCaddyFile() []byte {
 			dContent := g.addContainerToCaddyFile(&container)
 			for _, d := range dContent {
 				if d.name != "" {
-					directives[d.name] = d.content.Bytes()
+					targetAdded := false
+					if val, ok := directives[d.name]; ok {
+						re := regexp.MustCompile("proxy / (.[^{]+) {")
+						matches_new := re.FindStringSubmatch(string(d.content.Bytes()))
+						if len(matches_new) > 0 {
+							s_old := string(val)
+							matches_old := re.FindStringSubmatchIndex(s_old)
+							if len(matches_old) > 0 {
+								directives[d.name] = []byte(s_old[:matches_old[3]+1] + matches_new[1] + s_old[matches_old[3]:])
+								targetAdded = true
+							}
+						}
+					}
+					if ! targetAdded {
+						directives[d.name] = d.content.Bytes()
+					}
 				}
 			}
 		}
